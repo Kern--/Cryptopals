@@ -14,3 +14,12 @@ func HexToBase64(str string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString(inputBytes)
 	return encoded, nil
 }
+
+// Xor xors two equal length byte arrays
+func Xor(a []byte, b []byte) []byte {
+	c := make([]byte, len(a))
+	for i := 0; i < len(a); i++ {
+		c[i] = a[i] ^ b[i]
+	}
+	return c
+}
