@@ -2,8 +2,11 @@ package set1
 
 import (
 	"fmt"
+	"strings"
 
 	"encoding/hex"
+
+	"io/ioutil"
 
 	"github.com/kern--/Cryptopals/krypto"
 	"github.com/kern--/Cryptopals/util"
@@ -42,7 +45,22 @@ func RunChallenge3() {
 	input := "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 
 	inputBytes, _ := hex.DecodeString(input)
-	plaintext, key := krypto.CrackSingleByteXor(inputBytes)
+	plaintext, key, _ := krypto.CrackSingleByteXor(inputBytes)
 	fmt.Println("Key:", key)
+	fmt.Println("Plaintext:", string(plaintext))
+}
+
+// RunChallenge4 tests that set1 challenge4 has been correctly implemented
+func RunChallenge4() {
+	util.PrintChallengeHeader(1, 4)
+	data, err := ioutil.ReadFile("set1/resources/challenge4.txt")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	inputs := strings.Split(string(data), "\n")
+	input, plaintext, key, _ := krypto.DetectSingleByteXor(inputs)
+	fmt.Println("Input:", input)
+	fmt.Println("Key", key)
 	fmt.Println("Plaintext:", string(plaintext))
 }
