@@ -8,6 +8,8 @@ import (
 
 	"io/ioutil"
 
+	"encoding/base64"
+
 	"github.com/kern--/Cryptopals/krypto"
 	"github.com/kern--/Cryptopals/util"
 )
@@ -73,4 +75,39 @@ func RunChallenge5() {
 	expected := "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
 	result := krypto.RepeatingKeyXor([]byte(input), []byte(key))
 	util.PrintResults(expected, hex.EncodeToString(result))
+}
+
+// RunChallenge6 tests that set1 challenge6 has been correctly implemented
+func RunChallenge6() {
+	util.PrintChallengeHeader(1, 6)
+	// Test Hammingdistance
+	hamminga := "this is a test"
+	hammingb := "wokka wokka!!!"
+	hammingDistance := util.HammingDistance([]byte(hamminga), []byte(hammingb))
+	fmt.Println("Testing hamming distance implementation")
+	fmt.Println(hamminga)
+	fmt.Println(hammingb)
+	util.PrintResults("37", fmt.Sprintf("%d", hammingDistance))
+
+	// Test Transpose
+	toTranspose := "11221122112211221122"
+	toTransposeBytes, _ := hex.DecodeString(toTranspose)
+	expectedTransposed := "11111111112222222222"
+	transposed := util.Transpose(toTransposeBytes, 2)
+	util.PrintResults(expectedTransposed, hex.EncodeToString(transposed))
+
+	// Load data
+	data, err := ioutil.ReadFile("set1/resources/challenge6.txt")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	input := string(data)
+	input = strings.Replace(input, "\n", "", -1)
+	data, _ = base64.StdEncoding.DecodeString(input)
+
+	// Crack Data
+	plaintext, key := krypto.CrackRepeatingKeyXor(data)
+	fmt.Println("Key:", string(key))
+	fmt.Println("Plaintext:", string(plaintext))
 }

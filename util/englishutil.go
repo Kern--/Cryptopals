@@ -1,12 +1,10 @@
 package util
 
-import (
-	"math"
-)
+import "math"
 
 // The frequency of each letter in the english language as a percentage
 //  taken from wikipedia: https://en.wikipedia.org/wiki/Letter_frequency
-var characterFrequency = map[rune]float64{
+var characterFrequency = map[byte]float64{
 	'a': 0.08167,
 	'b': 0.01492,
 	'c': 0.02782,
@@ -38,11 +36,12 @@ var characterFrequency = map[rune]float64{
 // Score scores a piece of text where a lower score means that the text is more likely to be english
 func Score(english string) float64 {
 	englishLen := len(english)
-	charCounts := make(map[rune]int)
+	charCounts := make(map[byte]int)
 	var score float64
 
 	// Find the number of occurances of each character
-	for _, char := range english {
+	for i := 0; i < englishLen; i++ {
+		char := english[i]
 		count, exists := charCounts[char]
 		if !exists {
 			count = 0
