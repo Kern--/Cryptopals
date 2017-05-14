@@ -23,3 +23,13 @@ func Xor(a []byte, b []byte) []byte {
 	}
 	return c
 }
+
+// SingleByteXor xors each element in an array by a byte key
+func SingleByteXor(a []byte, key byte) []byte {
+	length := len(a)
+	b := make([]byte, length)
+	for i := 0; i < length; i++ {
+		b[i] = key
+	}
+	return Xor(a, b)
+}
