@@ -111,3 +111,22 @@ func RunChallenge6() {
 	fmt.Println("Key:", string(key))
 	fmt.Println("Plaintext:", string(plaintext))
 }
+
+func RunChallenge7() {
+	util.PrintChallengeHeader(1, 7)
+	key := "YELLOW SUBMARINE"
+
+	data, err := ioutil.ReadFile("set1/resources/challenge7.txt")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	input := string(data)
+	input = strings.Replace(input, "\n", "", -1)
+	data, _ = base64.StdEncoding.DecodeString(input)
+
+	cipher := krypto.NewAesEcbCipher([]byte(key))
+	plaintext, _ := cipher.Decrypt(data)
+
+	fmt.Println("Plaintext:", string(plaintext))
+}
