@@ -2,6 +2,8 @@ package krypto
 
 import (
 	"crypto/aes"
+
+	"github.com/kern--/Cryptopals/util"
 )
 
 // EcbCipher represents an AES ECB cipher since golang does not ship with this mode
@@ -34,4 +36,19 @@ func (cipher *EcbCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 		aesCipher.Decrypt(plaintext[start:], ciphertext[start:start+size])
 	}
 	return plaintext, nil
+}
+
+// DetectAesEcb detect which of a set of input byte slices is most likely to be encrypted with AES in ECB mode
+//  as well as the number of duplicate blocks used to make that decision
+func DetectAesEcb(inputs [][]byte) ([]byte, int) {
+	var likelyEncrypted []byte
+	var likelyEncryptedDupBlockCount int
+	for _, input := range inputs {
+		count := util.CountDuplicateBlocks(input, 16)
+		if count > likelyEncryptedDupBlockCount {
+			likelyEncryptedDupBlockCount = count
+			likelyEncrypted = input
+		}
+	}
+	return likelyEncrypted, likelyEncryptedDupBlockCount
 }

@@ -133,3 +133,34 @@ func RunChallenge7() {
 
 	fmt.Println("Plaintext:", string(plaintext))
 }
+
+// RunChallenge8 tests that set1 challenge8 has been correctly implemented
+func RunChallenge8() {
+	util.PrintChallengeHeader(1, 8)
+
+	// Test duplicate block detector
+	fmt.Println("Testing dupliacte block detector")
+	dupBlockInput := "112233441122334455661122"
+	dupBlockInputBytes, _ := hex.DecodeString(dupBlockInput)
+	dupBlockExpected := "3"
+	dupBlockActual := util.CountDuplicateBlocks(dupBlockInputBytes, 2)
+	util.PrintResults(dupBlockExpected, fmt.Sprintf("%d", dupBlockActual))
+
+	// Load data
+	fileData, err := ioutil.ReadFile("set1/resources/challenge8.txt")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	fileStrings := strings.Split(string(fileData), "\n")
+	inputs := make([][]byte, len(fileStrings))
+	for i, str := range fileStrings {
+		inputBytes, _ := hex.DecodeString(str)
+		inputs[i] = inputBytes
+	}
+
+	// Find most likely AES ECB
+	aesEcb, count := krypto.DetectAesEcb(inputs)
+	fmt.Println("Num Duplicate Blocks:", count)
+	fmt.Println("AES ECB Ciphertext:", hex.EncodeToString(aesEcb))
+}

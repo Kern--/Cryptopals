@@ -65,3 +65,31 @@ func Transpose(input []byte, blockSize int) []byte {
 	}
 	return result
 }
+
+// CountDuplicateBlocks counts the number of blocks that appear in the input which are
+//  identical to an earlier block in the input
+func CountDuplicateBlocks(input []byte, blocksize int) int {
+	var count int
+	// i = start of block we want try to find previous duplicate
+	for i := blocksize; i < len(input); i += blocksize {
+		// j = start of block we before i that we want to see if is duplicate
+		for j := 0; j < i; j += blocksize {
+			var k int
+			// k = index into each block
+			for k = 0; k < blocksize; k++ {
+				// if blocki[k] != blockj[k], then these blocks cannot be duplicates, break
+				if input[i+k] != input[j+k] {
+					break
+				}
+			}
+			// If we looked at the entire block, then blocki = blockj
+			//  because otherwise we would have broken out of the k loop with k < blocksize
+			//  since we found a duplicate, break so we don't have to keep looking for one
+			if k == blocksize {
+				count++
+				break
+			}
+		}
+	}
+	return count
+}
