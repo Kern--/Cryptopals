@@ -112,10 +112,12 @@ func RunChallenge6() {
 	fmt.Println("Plaintext:", string(plaintext))
 }
 
+// RunChallenge7 tests that set1 challenge7 has been correctly implemented
 func RunChallenge7() {
 	util.PrintChallengeHeader(1, 7)
 	key := "YELLOW SUBMARINE"
 
+	// Load data
 	data, err := ioutil.ReadFile("set1/resources/challenge7.txt")
 	if err != nil {
 		fmt.Println(err.Error())
@@ -125,6 +127,7 @@ func RunChallenge7() {
 	input = strings.Replace(input, "\n", "", -1)
 	data, _ = base64.StdEncoding.DecodeString(input)
 
+	// Decrypt with known key
 	cipher := krypto.NewAesEcbCipher([]byte(key))
 	plaintext, _ := cipher.Decrypt(data)
 
