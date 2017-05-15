@@ -10,4 +10,5 @@ func main() {
 	set1.RunChallenge5()
 	set1.RunChallenge6()
 	set1.RunChallenge7()
+	set1.RunChallenge8()
 }
