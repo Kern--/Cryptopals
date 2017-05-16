@@ -1,8 +1,11 @@
 package util
 
-import "fmt"
-import "strings"
-import "unicode/utf8"
+import (
+	"fmt"
+	"io/ioutil"
+	"strings"
+	"unicode/utf8"
+)
 
 // PrintChallengeHeader prints a standard block to indicate which challenge is running
 func PrintChallengeHeader(set int, challenge int) {
@@ -20,4 +23,15 @@ func PrintResults(expected string, result string) {
 	} else {
 		fmt.Println("FAILED")
 	}
+}
+
+// ReadFileRemoveNewline reads in an entire file and removes all newlines
+func ReadFileRemoveNewline(filename string) (string, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	output := string(data)
+	output = strings.Replace(output, "\n", "", -1)
+	return output, nil
 }

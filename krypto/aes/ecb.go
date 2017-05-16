@@ -1,4 +1,4 @@
-package krypto
+package aes
 
 import (
 	"crypto/aes"
@@ -14,6 +14,25 @@ type EcbCipher struct {
 // NewAesEcbCipher creates a new cipher that can be used to handle AES ECB encryption
 func NewAesEcbCipher(key []byte) *EcbCipher {
 	return &EcbCipher{key}
+}
+
+// Encrypt encrypts a plaintext with AES ECB
+//  Only works if the plaintext is aligned to the block size
+func (cipher *EcbCipher) Encrypt(plaintext []byte) ([]byte, error) {
+	ciphertext := make([]byte, len(plaintext))
+	blockSize := len(cipher.key)
+
+	// Create a real AES Cipher
+	aesCipher, err := aes.NewCipher(cipher.key)
+	if err != nil {
+		return nil, err
+	}
+
+	// Encrypt each block as if it were a whole plaintext
+	for start := 0; start < len(plaintext); start += blockSize {
+		aesCipher.Encrypt(ciphertext[start:], plaintext[start:start+blockSize])
+	}
+	return ciphertext, nil
 }
 
 // Decrypt decrypts a ciphertext that has been encrypted with AES ECB

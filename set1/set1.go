@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 
 	"github.com/kern--/Cryptopals/krypto"
+	"github.com/kern--/Cryptopals/krypto/aes"
 	"github.com/kern--/Cryptopals/util"
 )
 
@@ -128,7 +129,7 @@ func RunChallenge7() {
 	data, _ = base64.StdEncoding.DecodeString(input)
 
 	// Decrypt with known key
-	cipher := krypto.NewAesEcbCipher([]byte(key))
+	cipher := aes.NewAesEcbCipher([]byte(key))
 	plaintext, _ := cipher.Decrypt(data)
 
 	fmt.Println("Plaintext:", string(plaintext))
@@ -160,7 +161,7 @@ func RunChallenge8() {
 	}
 
 	// Find most likely AES ECB
-	aesEcb, count := krypto.DetectAesEcb(inputs)
+	aesEcb, count := aes.DetectAesEcb(inputs)
 	fmt.Println("Num Duplicate Blocks:", count)
 	fmt.Println("AES ECB Ciphertext:", hex.EncodeToString(aesEcb))
 }
