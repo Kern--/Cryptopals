@@ -93,3 +93,19 @@ func CountDuplicateBlocks(input []byte, blocksize int) int {
 	}
 	return count
 }
+
+// AddPkcs7Padding pads and input to a multiple of the blocksize using PKCS#7 padding
+func AddPkcs7Padding(input []byte, blocksize int) []byte {
+	// Figure out how many padding bytes are required
+	requiredPadding := blocksize - len(input)%blocksize
+	// Create a new padded slice that is the next mutliple of blocksize above the length of the inpute slice
+	padded := make([]byte, len(input)+requiredPadding)
+	// Copy the input into the padded slice
+	copy(padded, input)
+	// Iterate through the last requiredPadding bytes in the padded slice and set their value
+	//  equal to the number of padding bytes (i.e. requiredPadding)
+	for i := 0; i < requiredPadding; i++ {
+		padded[len(padded)-1-i] = byte(requiredPadding)
+	}
+	return padded
+}
