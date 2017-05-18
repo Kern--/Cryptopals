@@ -98,6 +98,12 @@ func CountDuplicateBlocks(input []byte, blocksize int) int {
 func AddPkcs7Padding(input []byte, blocksize int) []byte {
 	// Figure out how many padding bytes are required
 	requiredPadding := blocksize - len(input)%blocksize
+
+	// If requiredPadding == blocksize, that means we're already padded correctly
+	if requiredPadding == blocksize {
+		return input
+	}
+
 	// Create a new padded slice that is the next mutliple of blocksize above the length of the inpute slice
 	padded := make([]byte, len(input)+requiredPadding)
 	// Copy the input into the padded slice

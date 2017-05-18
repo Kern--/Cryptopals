@@ -76,3 +76,19 @@ func RunChallenge10() {
 	plaintext, err := cbcCipher.Decrypt(data, iv)
 	fmt.Println(string(plaintext))
 }
+
+// RunChallenge11 tests that set2 challenge11 has been correctly implemented
+func RunChallenge11() {
+	plaintext := "DUPLICATEBLOCKS!DUPLICATEBLOCKS!DUPLICATEBLOCKS!"
+	for i := 0; i < 10; i++ {
+		ciphertext, _ := aes.EncryptRandom([]byte(plaintext))
+		fmt.Println(hex.EncodeToString(ciphertext))
+		aesMode := aes.DetectAesMode(ciphertext, 16)
+		switch aesMode {
+		case aes.ECB:
+			println("Probably AES ECB")
+		case aes.CBC:
+			println("Probably AES CBC")
+		}
+	}
+}

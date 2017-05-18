@@ -19,8 +19,11 @@ func NewAesEcbCipher(key []byte) *EcbCipher {
 // Encrypt encrypts a plaintext with AES ECB
 //  Only works if the plaintext is aligned to the block size
 func (cipher *EcbCipher) Encrypt(plaintext []byte) ([]byte, error) {
-	ciphertext := make([]byte, len(plaintext))
 	blockSize := len(cipher.key)
+
+	// Setup plaintext and ciphertext
+	paddedPlaintext := util.AddPkcs7Padding(plaintext, blockSize)
+	cipherText := make([]byte, len(paddedPlaintext))
 
 	// Create a real AES Cipher
 	aesCipher, err := aes.NewCipher(cipher.key)
@@ -29,10 +32,10 @@ func (cipher *EcbCipher) Encrypt(plaintext []byte) ([]byte, error) {
 	}
 
 	// Encrypt each block as if it were a whole plaintext
-	for start := 0; start < len(plaintext); start += blockSize {
-		aesCipher.Encrypt(ciphertext[start:], plaintext[start:start+blockSize])
+	for start := 0; start < len(paddedPlaintext); start += blockSize {
+		aesCipher.Encrypt(cipherText[start:], paddedPlaintext[start:start+blockSize])
 	}
-	return ciphertext, nil
+	return cipherText, nil
 }
 
 // Decrypt decrypts a ciphertext that has been encrypted with AES ECB
