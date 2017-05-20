@@ -1,6 +1,9 @@
 package aes
 
 import "math/rand"
+import "encoding/base64"
+
+var instanceKey = make([]byte, 16)
 
 // EncryptRandom adds a random prefix and suffix to a plain text and then encrypts it under
 //  AES ECB or CBC with a random key
@@ -31,6 +34,23 @@ func EncryptRandom(plaintext []byte) ([]byte, error) {
 	iv := make([]byte, 16)
 	rand.Read(iv)
 	return cipher.Encrypt(paddedPlaintext, iv)
+}
+
+// EncryptRandomConsistent encrypts a plaintext appended with a secret plaintext
+//   under a random, but consistent key
+func EncryptRandomConsistent(plaintext []byte) ([]byte, error) {
+	secret := "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"
+	secretBytes, _ := base64.StdEncoding.DecodeString(secret)
+
+	input := append(plaintext, secretBytes...)
+
+	// Setup key if it hasn't already been
+	if instanceKey == nil {
+		rand.Read(instanceKey)
+	}
+
+	ecbCipher := NewAesEcbCipher(instanceKey)
+	return ecbCipher.Encrypt(input)
 }
 
 // DetectAesMode takes a ciphertext that was encrypted under AES ECB or CBC and

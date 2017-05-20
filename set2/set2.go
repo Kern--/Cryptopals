@@ -92,3 +92,12 @@ func RunChallenge11() {
 		}
 	}
 }
+
+// RunChallenge12 tests that set2 challenge11 has been correctly implemented
+func RunChallenge12() {
+	plaintext, err := aes.DecryptEcbInnerSecret()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(string(plaintext))
+}
