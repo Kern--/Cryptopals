@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+// DecryptEcbInnerSecret given that the ECB encryption method inside this
+// function encrypts a user input concatenated with a secret plaintext before
+// encrypting with a consistent, unknown key, decrypt that secret plaintext
+// and return it
 func DecryptEcbInnerSecret() ([]byte, error) {
 	// Find block size
 	input := []byte("a")
@@ -73,9 +77,17 @@ func crackBlock(blockNum int, prevBlock []byte, blockSize int) ([]byte, error) {
 		correctBlock := cipherText[blockNum*blockSize : (blockNum+1)*blockSize]
 		plainTextByte, exists := cipherBlockDict[hex.EncodeToString(correctBlock)]
 		if !exists {
-			// This shouldn't happen, but it seems to once I get to the padding
-			//  bytes. I need to figure out what's wrong here...
-			return plainTextBlock, nil
+			// This should never happen on a real plaintext byte because we've made a dictionary
+			//  of every possible value for the last byte and already knowing ever plaintext byte
+			//  that comest before it.
+			// However, once we start cracking the PKCS#7 padding, we will find the first byte =0x1
+			//  and when we build our dictionary, we will use this value as the second to last
+			//  byte. In the real situation, though, we added a byte, so the padding will change to 0x2
+			//  which means that all our dictionary entries were using the last second to last byte
+			//  and we will not find a match.
+			// Therefore, we assume that if the dictionary does not contain a match, we're cracking the
+			//  padding which means we were already done 1 byte ago
+			return plainTextBlock[:i-1], nil
 		}
 		plainTextBlock[i] = byte(plainTextByte)
 	}
