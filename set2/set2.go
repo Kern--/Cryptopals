@@ -7,6 +7,7 @@ import (
 
 	"encoding/base64"
 
+	"github.com/kern--/Cryptopals/krypto"
 	"github.com/kern--/Cryptopals/krypto/aes"
 	"github.com/kern--/Cryptopals/util"
 )
@@ -100,4 +101,47 @@ func RunChallenge12() {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(string(plaintext))
+}
+
+// RunChallenge13 tests that set2 challenge13 has been correctly implemented
+func RunChallenge13() {
+	// Test KVP parser
+	input := "email=test@test.com&uid=10&role=user"
+	dict := krypto.ParseProfileKeyValuePairs(input)
+	util.PrintResults("3", fmt.Sprintf("%d", len(dict)))
+	util.PrintResults("test@test.com", dict["email"])
+	util.PrintResults("10", dict["uid"])
+	util.PrintResults("user", dict["role"])
+	output := krypto.EncodeProfileKeyValuePairs(dict)
+	util.PrintResults(input, output)
+
+	// Test profile encryption/decryption
+	encryptedProfile, err := krypto.GetProfile("test@test.com&role=admin")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	profile, err := krypto.ParseEncryptedProfile(encryptedProfile)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	util.PrintResults("3", fmt.Sprintf("%d", len(profile)))
+	util.PrintResults("test@test.com&role=admin", profile["email"])
+	util.PrintResults("10", profile["uid"])
+	util.PrintResults("user", profile["role"])
+
+	// Test forging an admin role
+	fmt.Println("\nForging an admin user")
+	encryptedProfile, err = krypto.GenerateAdminUserToken()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	profile, err = krypto.ParseEncryptedProfile(encryptedProfile)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	util.PrintResults("admin", profile["role"])
 }
