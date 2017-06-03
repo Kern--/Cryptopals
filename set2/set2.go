@@ -85,6 +85,8 @@ func RunChallenge10() {
 
 // RunChallenge11 tests that set2 challenge11 has been correctly implemented
 func RunChallenge11() {
+	util.PrintChallengeHeader(2, 11)
+
 	plaintext := "DUPLICATEBLOCKS!DUPLICATEBLOCKS!DUPLICATEBLOCKS!"
 	for i := 0; i < 10; i++ {
 		ciphertext, _ := aes.EncryptRandom([]byte(plaintext))
@@ -101,6 +103,8 @@ func RunChallenge11() {
 
 // RunChallenge12 tests that set2 challenge12 has been correctly implemented
 func RunChallenge12() {
+	util.PrintChallengeHeader(2, 12)
+
 	attacker := aes.NewEcbAttacker(aes.AddSecret)
 	plaintext, err := attacker.DecryptEcbInnerSecret()
 	if err != nil {
@@ -111,6 +115,8 @@ func RunChallenge12() {
 
 // RunChallenge13 tests that set2 challenge13 has been correctly implemented
 func RunChallenge13() {
+	util.PrintChallengeHeader(2, 13)
+
 	// Test KVP parser
 	input := "email=test@test.com&uid=10&role=user"
 	dict := krypto.ParseProfileKeyValuePairs(input)
@@ -154,6 +160,8 @@ func RunChallenge13() {
 
 // RunChallenge14 tests that set2 challenge14 has been correctly implemented
 func RunChallenge14() {
+	util.PrintChallengeHeader(2, 14)
+
 	attacker := aes.NewEcbAttacker(aes.AddSaltySecret)
 	plaintext, err := attacker.DecryptEcbInnerSecret()
 	if err != nil {
