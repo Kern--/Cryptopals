@@ -3,7 +3,35 @@ package aes
 import "math/rand"
 import "encoding/base64"
 
+// SecretAdder takes a plaintext and adds some secrets to it
+type SecretAdder func([]byte) []byte
+
 var instanceKey = make([]byte, 16)
+var saltLen = rand.Int31n(32)
+var salt = make([]byte, saltLen)
+var secretBytes []byte
+
+var initialized bool
+
+func init() {
+	if !initialized {
+		rand.Read(instanceKey)
+		rand.Read(salt)
+		secret := "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"
+		secretBytes, _ = base64.StdEncoding.DecodeString(secret)
+		initialized = true
+	}
+}
+
+// AddSecret appends a secret plaintext to a plaintext
+func AddSecret(input []byte) []byte {
+	return append(input, secretBytes...)
+}
+
+// AddSaltySecret prepends a salt and appends a secret plaintext to a plaintext
+func AddSaltySecret(input []byte) []byte {
+	return append(salt, AddSecret(input)...)
+}
 
 // EncryptRandom adds a random prefix and suffix to a plain text and then encrypts it under
 //  AES ECB or CBC with a random key
@@ -38,11 +66,8 @@ func EncryptRandom(plaintext []byte) ([]byte, error) {
 
 // EncryptRandomConsistent encrypts a plaintext appended with a secret plaintext
 //   under a random, but consistent key
-func EncryptRandomConsistent(plaintext []byte) ([]byte, error) {
-	secret := "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"
-	secretBytes, _ := base64.StdEncoding.DecodeString(secret)
-
-	input := append(plaintext, secretBytes...)
+func EncryptRandomConsistent(plaintext []byte, addSecret SecretAdder) ([]byte, error) {
+	input := addSecret(plaintext)
 
 	// Setup key if it hasn't already been
 	if instanceKey == nil {

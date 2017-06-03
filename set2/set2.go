@@ -96,7 +96,8 @@ func RunChallenge11() {
 
 // RunChallenge12 tests that set2 challenge12 has been correctly implemented
 func RunChallenge12() {
-	plaintext, err := aes.DecryptEcbInnerSecret()
+	attacker := aes.NewEcbAttacker(aes.AddSecret)
+	plaintext, err := attacker.DecryptEcbInnerSecret()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -144,4 +145,14 @@ func RunChallenge13() {
 		return
 	}
 	util.PrintResults("admin", profile["role"])
+}
+
+// RunChallenge14 tests that set2 challenge14 has been correctly implemented
+func RunChallenge14() {
+	attacker := aes.NewEcbAttacker(aes.AddSaltySecret)
+	plaintext, err := attacker.DecryptEcbInnerSecret()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(string(plaintext))
 }

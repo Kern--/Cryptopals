@@ -6,39 +6,44 @@ import (
 	"strings"
 )
 
+// EcbAttacker is a type that can break inner secrets appended to a plaintext before encrypting with AES ECB
+type EcbAttacker struct {
+	addSecret SecretAdder
+}
+
+// NewEcbAttacker creates a new EcbAttacker
+func NewEcbAttacker(addSecret SecretAdder) *EcbAttacker {
+	return &EcbAttacker{addSecret}
+}
+
 // DecryptEcbInnerSecret given that the ECB encryption method inside this
 // function encrypts a user input concatenated with a secret plaintext before
 // encrypting with a consistent, unknown key, decrypt that secret plaintext
 // and return it
-func DecryptEcbInnerSecret() ([]byte, error) {
-	// Find block size
+func (attacker *EcbAttacker) DecryptEcbInnerSecret() ([]byte, error) {
+	// Determine block size
 	input := []byte("a")
-	initialCipher, err := EncryptRandomConsistent(input)
+	initialCipher, err := EncryptRandomConsistent(input, attacker.addSecret)
 	if err != nil {
 		return nil, err
 	}
-	initialLength := len(initialCipher)
-	increasedLength := initialLength
+	initialLen := len(initialCipher)
+	increasedLen := initialLen
 	i := 0
-	for initialLength == increasedLength {
+	for initialLen == increasedLen {
 		input = append(input, byte('a'))
-		newCipher, err := EncryptRandomConsistent(input)
+		newCipher, err := EncryptRandomConsistent(input, attacker.addSecret)
 		if err != nil {
 			return nil, err
 		}
-		increasedLength = len(newCipher)
+		increasedLen = len(newCipher)
 		i++
 	}
-	blockSize := increasedLength - initialLength
-	// If we added a whole block's worth of junk before we increase the length
-	//  then that means that the initial secret was an exact multiple of the block size
-	//  and so therefore our initial size calculation included in char + blocksize-1 padding
-	//  and so we should remove that from the secret length
-	secretLength := initialLength - (i/blockSize)*blockSize
+	blockSize := increasedLen - initialLen
 
 	// Determine encryption mode
-	input = []byte("DUPLICATEBLOCKS!DUPLICATEBLOCKS!DUPLICATEBLOCKS!")
-	ciphertext, err := EncryptRandomConsistent(input)
+	input = []byte(strings.Repeat("b", 8*blockSize))
+	ciphertext, err := EncryptRandomConsistent(input, attacker.addSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +52,28 @@ func DecryptEcbInnerSecret() ([]byte, error) {
 		return nil, errors.New("Cannot decrypt secret of cipher that doesn't use ECB")
 	}
 
+	// Determine the salt length
+	saltLen, padLen, err := attacker.determineSaltLength(blockSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine the number of blocks filled by salt if we pad it to be an even multiple of the block size
+	//  This allows us to crack the secret as if there were no salt by simply ignoring the first n blocks,
+	//  which are completely filled by a padded salt
+	blockOffset := (saltLen + padLen) / blockSize
+
+	// Determine the secret length
+	secretLen, err := attacker.determineSecretLength(blockSize, saltLen, padLen)
+	if err != nil {
+		return nil, err
+	}
+
 	// Decrypt the secret
-	prevBlock := []byte(strings.Repeat("a", blockSize))
-	plainText := make([]byte, secretLength)
-	for i := 0; i*blockSize < secretLength; i++ {
-		plaintextBlock, err := crackBlock(i, prevBlock, blockSize)
+	prevBlock := []byte(strings.Repeat("b", blockSize))
+	plainText := make([]byte, secretLen)
+	for i := 0; i*blockSize < secretLen; i++ {
+		plaintextBlock, err := attacker.crackBlock(i, padLen, prevBlock, blockSize, blockOffset)
 		if err != nil {
 			return nil, err
 		}
@@ -61,20 +83,91 @@ func DecryptEcbInnerSecret() ([]byte, error) {
 	return plainText, nil
 }
 
+// determineSaltLength the determines the legnth of an unknown salt prepended to every plaintext
+func (attacker *EcbAttacker) determineSaltLength(blockSize int) (int, int, error) {
+	for padLen := 0; padLen < blockSize; padLen++ {
+		pad := []byte(strings.Repeat("a", padLen))
+		input := []byte(strings.Repeat("b", 3*blockSize))
+		input = append(pad, input...)
+		ciphertext, err := EncryptRandomConsistent(input, attacker.addSecret)
+		if err != nil {
+			return 0, 0, err
+		}
+		inputStart := findConsecutiveIdenticalBlocks(ciphertext, blockSize, 3)
+		if inputStart > 0 {
+			return inputStart - padLen, padLen, nil
+		}
+	}
+	return 0, 0, nil
+}
+
+// determineSecretLength determines the length of a secret that is appeneded to every plaintext
+//  this assumes you already know if there is a prepended salt, what that salt's length is,
+//  and how many bytes must be added to the salt to block align it
+func (attacker *EcbAttacker) determineSecretLength(blockSize int, saltLen int, padLen int) (int, error) {
+	pad := []byte(strings.Repeat("a", padLen))
+	ciphertext, err := EncryptRandomConsistent(pad, attacker.addSecret)
+	if err != nil {
+		return 0, err
+	}
+	initialLen := len(ciphertext)
+
+	for inputLen := 1; inputLen < blockSize+1; inputLen++ {
+		input := pad
+		input = append(input, []byte(strings.Repeat("a", inputLen))...)
+		ciphertext, err := EncryptRandomConsistent(input, attacker.addSecret)
+		if err != nil {
+			return 0, err
+		}
+		if len(ciphertext) != initialLen {
+			prefixLen := saltLen + padLen
+			return len(ciphertext) - prefixLen - inputLen - blockSize + 1, nil
+		}
+	}
+	return 0, errors.New("Did not find the secret length. This should not happen")
+}
+
+// findConsecutiveIdenticalBlocks finds the starting index of the first instance
+//  where there are numBlocks identical consecutive blocks.
+//  returns -1 if there are no instances of consecutive identical blocks
+func findConsecutiveIdenticalBlocks(input []byte, blockSize int, numBlocks int) int {
+	// i = start index
+	// j = offset within a block
+	// k = block to compare against
+	for i := 0; i+numBlocks*blockSize < len(input); i += blockSize {
+		identical := true
+		for j := 0; j < blockSize; j++ {
+			for k := 0; k < numBlocks; k++ {
+				if input[i+j] != input[i+j+k*blockSize] {
+					identical = false
+					break
+				}
+			}
+			if identical {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
 // crackBlock cracks a block of the unknown secret that is appended to a give plaintext before encrypting
-func crackBlock(blockNum int, prevBlock []byte, blockSize int) ([]byte, error) {
+func (attacker *EcbAttacker) crackBlock(blockNum int, padLen int, prevBlock []byte, blockSize int, blockOffset int) ([]byte, error) {
 	plainTextBlock := make([]byte, blockSize)
+	pad := []byte(strings.Repeat("a", padLen))
 	for i := 0; i < blockSize; i++ {
 		attackBlock := make([]byte, blockSize)
 		copy(attackBlock, prevBlock[i+1:])
 		copy(attackBlock[blockSize-1-i:], plainTextBlock[:i])
-		cipherBlockDict, err := generateBlockDictionary(attackBlock, blockSize)
+		attackBlock = append(pad, attackBlock...)
+		cipherBlockDict, err := attacker.generateBlockDictionary(attackBlock, blockSize, blockOffset)
 		if err != nil {
 			return nil, err
 		}
-		junk := []byte(strings.Repeat("a", blockSize-1-i))
-		cipherText, err := EncryptRandomConsistent(junk)
-		correctBlock := cipherText[blockNum*blockSize : (blockNum+1)*blockSize]
+		junk := []byte(strings.Repeat("b", blockSize-1-i))
+		junk = append(pad, junk...)
+		cipherText, err := EncryptRandomConsistent(junk, attacker.addSecret)
+		correctBlock := cipherText[(blockNum+blockOffset)*blockSize : (blockNum+blockOffset+1)*blockSize]
 		plainTextByte, exists := cipherBlockDict[hex.EncodeToString(correctBlock)]
 		if !exists {
 			// This should never happen on a real plaintext byte because we've made a dictionary
@@ -95,18 +188,18 @@ func crackBlock(blockNum int, prevBlock []byte, blockSize int) ([]byte, error) {
 }
 
 // Given a block, create a dictionary of the encrypted block for every possible last byte value
-func generateBlockDictionary(baseBlock []byte, blockSize int) (map[string]byte, error) {
+func (attacker *EcbAttacker) generateBlockDictionary(baseBlock []byte, blockSize int, blockOffset int) (map[string]byte, error) {
 	dictionary := make(map[string]byte)
 	baseBlockCopy := make([]byte, len(baseBlock))
 	copy(baseBlockCopy, baseBlock)
 
 	for i := 0; i <= 0xFF; i++ {
-		baseBlockCopy[blockSize-1] = byte(i)
-		cipherText, err := EncryptRandomConsistent(baseBlockCopy)
+		baseBlockCopy[len(baseBlockCopy)-1] = byte(i)
+		cipherText, err := EncryptRandomConsistent(baseBlockCopy, attacker.addSecret)
 		if err != nil {
 			return nil, err
 		}
-		block := cipherText[:blockSize]
+		block := cipherText[blockOffset*blockSize : (blockOffset+1)*blockSize]
 		dictionary[hex.EncodeToString(block)] = byte(i)
 	}
 	return dictionary, nil

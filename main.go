@@ -26,6 +26,7 @@ var challenges = [...]challenge{
 	set2.RunChallenge11,
 	set2.RunChallenge12,
 	set2.RunChallenge13,
+	set2.RunChallenge14,
 }
 
 var sets = [...][]challenge{
