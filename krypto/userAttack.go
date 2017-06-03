@@ -29,3 +29,14 @@ func GenerateAdminUserToken() ([]byte, error) {
 	copy(encryptedProfile[length-16:], roleAdminBlock)
 	return encryptedProfile, nil
 }
+
+// HasAdminRole detects whether an encrypted query contains the admin role
+func HasAdminRole(encryptedQuery []byte) (bool, error) {
+	plaintext, err := DecryptQuery(encryptedQuery)
+	if err != nil {
+		return false, err
+	}
+	kvp := ParseProfileKeyValuePairs(string(plaintext), "=", ";")
+	_, exists := kvp["admin"]
+	return exists, nil
+}

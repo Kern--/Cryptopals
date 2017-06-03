@@ -8,15 +8,41 @@ import (
 	"github.com/kern--/Cryptopals/krypto/aes"
 )
 
-var initialized = false
 var key = make([]byte, 16)
+var iv = make([]byte, 16)
+
+func init() {
+	rand.Read(key)
+	rand.Read(iv)
+}
 
 func getCipher() *aes.EcbCipher {
-	if !initialized {
-		rand.Read(key)
-		initialized = true
-	}
 	return aes.NewAesEcbCipher(key)
+}
+
+func getCbcCipher() *aes.CbcCipher {
+	return aes.NewAesCbcCipher(key)
+}
+
+// buildUserQuery embeds an escaped input into a query
+func buildUserQuery(input []byte) []byte {
+	prefix := []byte("comment1=cooking%20MCs;userdata=")
+	suffix := []byte(";comment2=%20like%20a%20pound%20of%20bacon")
+	input = []byte(url.QueryEscape(string(input)))
+	return append(append(prefix, input...), suffix...)
+}
+
+// GenerateEncryptedQuery generates an encrypted query from the specified user data
+func GenerateEncryptedQuery(input []byte) ([]byte, error) {
+	input = buildUserQuery(input)
+	cipher := getCbcCipher()
+	return cipher.Encrypt(input, iv)
+}
+
+// DecryptQuery decrypts a user query
+func DecryptQuery(input []byte) ([]byte, error) {
+	cipher := getCbcCipher()
+	return cipher.Decrypt(input, iv)
 }
 
 // GetProfile gets an ECB encrypted profile for a given email
@@ -46,7 +72,7 @@ func ParseEncryptedProfile(encryptedProfile []byte) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	dict := ParseProfileKeyValuePairs(string(plainText))
+	dict := ParseProfileKeyValuePairs(string(plainText), "=", "&")
 	escapedEmail, _ := url.QueryUnescape(dict["email"])
 	dict["email"] = strings.Replace(escapedEmail, " ", "&", -1)
 	return dict, nil
@@ -54,18 +80,22 @@ func ParseEncryptedProfile(encryptedProfile []byte) (map[string]string, error) {
 
 // ParseProfileKeyValuePairs parse a string encoding of key value pairs as key1=value1&key2=value2... into
 //  a map with the keys to values
-func ParseProfileKeyValuePairs(input string) map[string]string {
+func ParseProfileKeyValuePairs(input string, keyValueSparator string, tupleSeparator string) map[string]string {
 	dict := make(map[string]string)
-	keyvaluepairs := strings.Split(input, "&")
+	keyvaluepairs := strings.Split(input, tupleSeparator)
 	for _, pair := range keyvaluepairs {
-		keyandvalue := strings.Split(pair, "=")
+		keyandvalue := strings.Split(pair, keyValueSparator)
 		var value string
 		// if the length > 2 then there is an "=" in the value so we should rejoin
 		//  it to make the value whole again
-		if len(keyandvalue) > 2 {
-			value = strings.Join(keyandvalue[1:], "=")
-		} else {
+
+		switch {
+		case len(keyandvalue) > 2:
+			value = strings.Join(keyandvalue[1:], keyValueSparator)
+		case len(keyandvalue) == 2:
 			value = keyandvalue[1]
+		default:
+			continue
 		}
 		key := keyandvalue[0]
 		dict[key] = value

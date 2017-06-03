@@ -1,7 +1,9 @@
 package aes
 
-import "math/rand"
-import "encoding/base64"
+import (
+	"encoding/base64"
+	"math/rand"
+)
 
 // SecretAdder takes a plaintext and adds some secrets to it
 type SecretAdder func([]byte) []byte

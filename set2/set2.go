@@ -119,7 +119,7 @@ func RunChallenge13() {
 
 	// Test KVP parser
 	input := "email=test@test.com&uid=10&role=user"
-	dict := krypto.ParseProfileKeyValuePairs(input)
+	dict := krypto.ParseProfileKeyValuePairs(input, "=", "&")
 	util.PrintResults("3", fmt.Sprintf("%d", len(dict)))
 	util.PrintResults("test@test.com", dict["email"])
 	util.PrintResults("10", dict["uid"])
@@ -168,4 +168,82 @@ func RunChallenge14() {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(string(plaintext))
+}
+
+// RunChallenge15 tests that set2 challenge15 has been correctly implemented
+func RunChallenge15() {
+	util.PrintChallengeHeader(2, 15)
+	// Valid test
+	input := "FullBlockTest!"
+	paddedInput := util.AddPkcs7Padding([]byte(input), 16)
+	output, err := util.RemovePkcs7Padding(paddedInput, 16)
+	if err != nil {
+		fmt.Println("Error removing padding from valid input:", err.Error())
+	}
+	util.PrintResults(input, string(output))
+
+	// Invalid test
+	input = "NotCorrect\x03"
+	_, err = util.RemovePkcs7Padding([]byte(input), 16)
+	if err == nil {
+		fmt.Println("No error on invalid padding")
+	} else {
+		fmt.Println("Correctly errored on invalid padding")
+	}
+}
+
+// RunChallenge16 tests that set2 challenge16 has been correctly implemented
+func RunChallenge16() {
+	util.PrintChallengeHeader(2, 16)
+
+	input := []byte(";admin=true")
+	query, err := krypto.GenerateEncryptedQuery(input)
+	if err != nil {
+		fmt.Println("Error generating encrypted query", err.Error())
+	}
+	hasRole, err := krypto.HasAdminRole(query)
+	if err != nil {
+		fmt.Println("Error checking for admin role", err.Error())
+	}
+	if hasRole {
+		fmt.Println("Unexpectedly has admin role")
+	} else {
+		fmt.Println("OK")
+	}
+
+	// Encrypt a known, block aligned plaintext such that we can manipulate the ciphertext to control how it will be decrypted.
+	// Since CBC mode decryption XORs the previous ciphertext block with the next block AFTER decrypting
+	//   the next block, any bit flips in the previous ciphertext result in the same bit flips in the next
+	//   plaintext block.
+	// We also have the property that a ^ (a ^ b) = b
+	// The actual algorithm:
+	// bbbbbbbbbbbbbbbb                    - create a block full of junk that we don't care about
+	// bbbbbbbbbbbbbbbb aaaaa-admin-true   - append a block with sensitive characters replaced (in this case ';' and '=' replaced by '-')
+	// ???????????????? ????????????????   - encrypt
+	// ?????s?????e???? ????????????????   - xor bytes 5 and 11 by (';' ^ '-') and ('=' ^ '-') respectively
+	// ################ aaaaa;admin=true   - decrypt. the first block will be meaningless
+	//                                                the second block will have bytes 5 and 11 xored with (';' ^ '-') and ('=' ^ '-') respectively
+	//                                                '-' ^ (';' ^ '-') = ';'
+	//                                                '-' ^ ('=' ^ '-') = '='
+
+	input = []byte("bbbbbbbbbbbbbbbbaaaaa-admin-true")
+	query, err = krypto.GenerateEncryptedQuery(input)
+	if err != nil {
+		fmt.Println("Error generating encrypted query", err.Error())
+	}
+
+	// ';' ^ '-' = 0x16
+	// '=' ^ '-' = 0x10
+	query[32+5] ^= 0x16  // convert '-' to ';'
+	query[32+11] ^= 0x10 // convert '-' to '='
+
+	hasRole, err = krypto.HasAdminRole(query)
+	if err != nil {
+		fmt.Println("Error checking for admin role", err.Error())
+	}
+	if hasRole {
+		fmt.Println("OK")
+	} else {
+		fmt.Println("Bit flip attack failed")
+	}
 }
