@@ -39,9 +39,14 @@ func RunChallenge10() {
 		fmt.Println("error encrypting with ecb:", err.Error())
 		return
 	}
-	finalEcb, err := ecbCipher.Decrypt(ecbCipherText)
+	paddedPlaintext, err := ecbCipher.Decrypt(ecbCipherText)
 	if err != nil {
 		fmt.Println("error decrypting with ecb:", err.Error())
+		return
+	}
+	finalEcb, err := util.RemovePkcs7Padding(paddedPlaintext, 16)
+	if err != nil {
+		fmt.Println("error removing padding from ecb:", err.Error())
 		return
 	}
 	util.PrintResults(ecbPlainText, string(finalEcb))

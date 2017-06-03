@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"math"
 )
 
@@ -99,11 +100,6 @@ func AddPkcs7Padding(input []byte, blocksize int) []byte {
 	// Figure out how many padding bytes are required
 	requiredPadding := blocksize - len(input)%blocksize
 
-	// If requiredPadding == blocksize, that means we're already padded correctly
-	if requiredPadding == blocksize {
-		return input
-	}
-
 	// Create a new padded slice that is the next mutliple of blocksize above the length of the inpute slice
 	padded := make([]byte, len(input)+requiredPadding)
 	// Copy the input into the padded slice
@@ -114,4 +110,20 @@ func AddPkcs7Padding(input []byte, blocksize int) []byte {
 		padded[len(padded)-1-i] = byte(requiredPadding)
 	}
 	return padded
+}
+
+// RemovePkcs7Padding removes pkcs7 padding from a plaintext if the padding is valid
+func RemovePkcs7Padding(input []byte, blockSize int) ([]byte, error) {
+	inputLen := len(input)
+	padLen := int(input[inputLen-1])
+	if padLen > blockSize || inputLen < padLen {
+		return nil, errors.New("Invalid padding")
+	}
+
+	for i := 0; i < padLen; i++ {
+		if input[inputLen-1-i] != byte(padLen) {
+			return nil, errors.New("Invalid padding")
+		}
+	}
+	return input[:inputLen-padLen], nil
 }

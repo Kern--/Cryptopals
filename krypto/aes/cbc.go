@@ -38,14 +38,17 @@ func (cipher *CbcCipher) Encrypt(plaintext []byte, iv []byte) ([]byte, error) {
 		// XOR previous block and current block
 		curPlaintextBlock := util.Xor(previousBlock, paddedPlaintext[i:i+blockSize])
 		// Encrypt XOR result to get current cipher block
-		curCipherBlock, err := ecbCipher.Encrypt(curPlaintextBlock)
+		//   NOTE: since the ecb cipher uses pkcs7 and our plaintext
+		//   is always block aligned, there will be an extra padding
+		//   block in the resulting ciphertext
+		curCipherText, err := ecbCipher.Encrypt(curPlaintextBlock)
 		if err != nil {
 			return nil, err
 		}
 		// Copy current cipher block into ciphertext (Probably should allow for a dst byte slice instead)
-		copy(cipherText[i:i+blockSize], curCipherBlock)
+		copy(cipherText[i:i+blockSize], curCipherText[:blockSize])
 		// Update previous block
-		previousBlock = curCipherBlock
+		previousBlock = curCipherText[:blockSize]
 	}
 	return cipherText, nil
 }
