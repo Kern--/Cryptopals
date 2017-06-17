@@ -1,38 +1,11 @@
 package aes
 
-import (
-	"encoding/base64"
-	"math/rand"
-)
-
-// SecretAdder takes a plaintext and adds some secrets to it
-type SecretAdder func([]byte) []byte
+import "math/rand"
 
 var instanceKey = make([]byte, 16)
-var saltLen = rand.Int31n(32)
-var salt = make([]byte, saltLen)
-var secretBytes []byte
-
-var initialized bool
 
 func init() {
-	if !initialized {
-		rand.Read(instanceKey)
-		rand.Read(salt)
-		secret := "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"
-		secretBytes, _ = base64.StdEncoding.DecodeString(secret)
-		initialized = true
-	}
-}
-
-// AddSecret appends a secret plaintext to a plaintext
-func AddSecret(input []byte) []byte {
-	return append(input, secretBytes...)
-}
-
-// AddSaltySecret prepends a salt and appends a secret plaintext to a plaintext
-func AddSaltySecret(input []byte) []byte {
-	return append(salt, AddSecret(input)...)
+	rand.Read(instanceKey)
 }
 
 // EncryptRandom adds a random prefix and suffix to a plain text and then encrypts it under
@@ -64,20 +37,6 @@ func EncryptRandom(plaintext []byte) ([]byte, error) {
 	iv := make([]byte, 16)
 	rand.Read(iv)
 	return cipher.Encrypt(paddedPlaintext, iv)
-}
-
-// EncryptRandomConsistent encrypts a plaintext appended with a secret plaintext
-//   under a random, but consistent key
-func EncryptRandomConsistent(plaintext []byte, addSecret SecretAdder) ([]byte, error) {
-	input := addSecret(plaintext)
-
-	// Setup key if it hasn't already been
-	if instanceKey == nil {
-		rand.Read(instanceKey)
-	}
-
-	ecbCipher := NewAesEcbCipher(instanceKey)
-	return ecbCipher.Encrypt(input)
 }
 
 // DetectAesMode takes a ciphertext that was encrypted under AES ECB or CBC and

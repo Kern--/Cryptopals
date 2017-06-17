@@ -1,29 +1,32 @@
-package aes
+package attack
 
 import (
 	"encoding/hex"
 	"errors"
 	"strings"
+
+	"github.com/kern--/Cryptopals/krypto/aes"
+	"github.com/kern--/Cryptopals/krypto/application"
 )
 
-// EcbAttacker is a type that can break inner secrets appended to a plaintext before encrypting with AES ECB
-type EcbAttacker struct {
-	addSecret SecretAdder
+// EcbSuffixAttacker is a type that can break inner secrets appended to a plaintext before encrypting with AES ECB
+type EcbSuffixAttacker struct {
+	app *application.Ecb
 }
 
-// NewEcbAttacker creates a new EcbAttacker
-func NewEcbAttacker(addSecret SecretAdder) *EcbAttacker {
-	return &EcbAttacker{addSecret}
+// NewEcbSuffixAttacker creates a new EcbSuffixAttacker
+func NewEcbSuffixAttacker(app *application.Ecb) *EcbSuffixAttacker {
+	return &EcbSuffixAttacker{app}
 }
 
-// DecryptEcbInnerSecret given that the ECB encryption method inside this
+// DecryptSecretSuffix given that the ECB encryption method inside this
 // function encrypts a user input concatenated with a secret plaintext before
 // encrypting with a consistent, unknown key, decrypt that secret plaintext
 // and return it
-func (attacker *EcbAttacker) DecryptEcbInnerSecret() ([]byte, error) {
+func (attacker *EcbSuffixAttacker) DecryptSecretSuffix() ([]byte, error) {
 	// Determine block size
 	input := []byte("a")
-	initialCipher, err := EncryptRandomConsistent(input, attacker.addSecret)
+	initialCipher, err := attacker.app.Encrypt(input)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +35,7 @@ func (attacker *EcbAttacker) DecryptEcbInnerSecret() ([]byte, error) {
 	i := 0
 	for initialLen == increasedLen {
 		input = append(input, byte('a'))
-		newCipher, err := EncryptRandomConsistent(input, attacker.addSecret)
+		newCipher, err := attacker.app.Encrypt(input)
 		if err != nil {
 			return nil, err
 		}
@@ -43,12 +46,12 @@ func (attacker *EcbAttacker) DecryptEcbInnerSecret() ([]byte, error) {
 
 	// Determine encryption mode
 	input = []byte(strings.Repeat("b", 8*blockSize))
-	ciphertext, err := EncryptRandomConsistent(input, attacker.addSecret)
+	ciphertext, err := attacker.app.Encrypt(input)
 	if err != nil {
 		return nil, err
 	}
-	mode := DetectAesMode(ciphertext, blockSize)
-	if mode != ECB {
+	mode := aes.DetectAesMode(ciphertext, blockSize)
+	if mode != aes.ECB {
 		return nil, errors.New("Cannot decrypt secret of cipher that doesn't use ECB")
 	}
 
@@ -84,12 +87,12 @@ func (attacker *EcbAttacker) DecryptEcbInnerSecret() ([]byte, error) {
 }
 
 // determineSaltLength the determines the legnth of an unknown salt prepended to every plaintext
-func (attacker *EcbAttacker) determineSaltLength(blockSize int) (int, int, error) {
+func (attacker *EcbSuffixAttacker) determineSaltLength(blockSize int) (int, int, error) {
 	for padLen := 0; padLen < blockSize; padLen++ {
 		pad := []byte(strings.Repeat("a", padLen))
 		input := []byte(strings.Repeat("b", 3*blockSize))
 		input = append(pad, input...)
-		ciphertext, err := EncryptRandomConsistent(input, attacker.addSecret)
+		ciphertext, err := attacker.app.Encrypt(input)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -104,9 +107,9 @@ func (attacker *EcbAttacker) determineSaltLength(blockSize int) (int, int, error
 // determineSecretLength determines the length of a secret that is appeneded to every plaintext
 //  this assumes you already know if there is a prepended salt, what that salt's length is,
 //  and how many bytes must be added to the salt to block align it
-func (attacker *EcbAttacker) determineSecretLength(blockSize int, saltLen int, padLen int) (int, error) {
+func (attacker *EcbSuffixAttacker) determineSecretLength(blockSize int, saltLen int, padLen int) (int, error) {
 	pad := []byte(strings.Repeat("a", padLen))
-	ciphertext, err := EncryptRandomConsistent(pad, attacker.addSecret)
+	ciphertext, err := attacker.app.Encrypt(pad)
 	if err != nil {
 		return 0, err
 	}
@@ -115,7 +118,7 @@ func (attacker *EcbAttacker) determineSecretLength(blockSize int, saltLen int, p
 	for inputLen := 1; inputLen < blockSize+1; inputLen++ {
 		input := pad
 		input = append(input, []byte(strings.Repeat("a", inputLen))...)
-		ciphertext, err := EncryptRandomConsistent(input, attacker.addSecret)
+		ciphertext, err := attacker.app.Encrypt(input)
 		if err != nil {
 			return 0, err
 		}
@@ -152,7 +155,7 @@ func findConsecutiveIdenticalBlocks(input []byte, blockSize int, numBlocks int) 
 }
 
 // crackBlock cracks a block of the unknown secret that is appended to a give plaintext before encrypting
-func (attacker *EcbAttacker) crackBlock(blockNum int, padLen int, prevBlock []byte, blockSize int, blockOffset int) ([]byte, error) {
+func (attacker *EcbSuffixAttacker) crackBlock(blockNum int, padLen int, prevBlock []byte, blockSize int, blockOffset int) ([]byte, error) {
 	plainTextBlock := make([]byte, blockSize)
 	pad := []byte(strings.Repeat("a", padLen))
 	for i := 0; i < blockSize; i++ {
@@ -166,7 +169,7 @@ func (attacker *EcbAttacker) crackBlock(blockNum int, padLen int, prevBlock []by
 		}
 		junk := []byte(strings.Repeat("b", blockSize-1-i))
 		junk = append(pad, junk...)
-		cipherText, err := EncryptRandomConsistent(junk, attacker.addSecret)
+		cipherText, err := attacker.app.Encrypt(junk)
 		correctBlock := cipherText[(blockNum+blockOffset)*blockSize : (blockNum+blockOffset+1)*blockSize]
 		plainTextByte, exists := cipherBlockDict[hex.EncodeToString(correctBlock)]
 		if !exists {
@@ -188,14 +191,14 @@ func (attacker *EcbAttacker) crackBlock(blockNum int, padLen int, prevBlock []by
 }
 
 // Given a block, create a dictionary of the encrypted block for every possible last byte value
-func (attacker *EcbAttacker) generateBlockDictionary(baseBlock []byte, blockSize int, blockOffset int) (map[string]byte, error) {
+func (attacker *EcbSuffixAttacker) generateBlockDictionary(baseBlock []byte, blockSize int, blockOffset int) (map[string]byte, error) {
 	dictionary := make(map[string]byte)
 	baseBlockCopy := make([]byte, len(baseBlock))
 	copy(baseBlockCopy, baseBlock)
 
 	for i := 0; i <= 0xFF; i++ {
 		baseBlockCopy[len(baseBlockCopy)-1] = byte(i)
-		cipherText, err := EncryptRandomConsistent(baseBlockCopy, attacker.addSecret)
+		cipherText, err := attacker.app.Encrypt(baseBlockCopy)
 		if err != nil {
 			return nil, err
 		}

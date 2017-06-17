@@ -9,6 +9,8 @@ import (
 
 	"github.com/kern--/Cryptopals/krypto"
 	"github.com/kern--/Cryptopals/krypto/aes"
+	"github.com/kern--/Cryptopals/krypto/application"
+	"github.com/kern--/Cryptopals/krypto/attack"
 	"github.com/kern--/Cryptopals/util"
 )
 
@@ -105,8 +107,8 @@ func RunChallenge11() {
 func RunChallenge12() {
 	util.PrintChallengeHeader(2, 12)
 
-	attacker := aes.NewEcbAttacker(aes.AddSecret)
-	plaintext, err := attacker.DecryptEcbInnerSecret()
+	attacker := attack.NewEcbSuffixAttacker(application.NewSecretSuffixEcb(16))
+	plaintext, err := attacker.DecryptSecretSuffix()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -162,8 +164,8 @@ func RunChallenge13() {
 func RunChallenge14() {
 	util.PrintChallengeHeader(2, 14)
 
-	attacker := aes.NewEcbAttacker(aes.AddSaltySecret)
-	plaintext, err := attacker.DecryptEcbInnerSecret()
+	attacker := attack.NewEcbSuffixAttacker(application.NewPrefixedSecretSuffixEcb(16))
+	plaintext, err := attacker.DecryptSecretSuffix()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
