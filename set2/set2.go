@@ -7,7 +7,6 @@ import (
 
 	"encoding/base64"
 
-	"github.com/kern--/Cryptopals/krypto"
 	"github.com/kern--/Cryptopals/krypto/aes"
 	"github.com/kern--/Cryptopals/krypto/application"
 	"github.com/kern--/Cryptopals/krypto/attack"
@@ -121,43 +120,48 @@ func RunChallenge13() {
 
 	// Test KVP parser
 	input := "email=test@test.com&uid=10&role=user"
-	dict := krypto.ParseProfileKeyValuePairs(input, "=", "&")
+	dict := util.DecodeQueryString(input, "=", "&")
 	util.PrintResults("3", fmt.Sprintf("%d", len(dict)))
 	util.PrintResults("test@test.com", dict["email"])
 	util.PrintResults("10", dict["uid"])
 	util.PrintResults("user", dict["role"])
-	output := krypto.EncodeProfileKeyValuePairs(dict)
+	output := util.EncodeToQueryString(dict, []string{"email", "uid", "role"}, "=", "&")
 	util.PrintResults(input, output)
 
 	// Test profile encryption/decryption
-	encryptedProfile, err := krypto.GetProfile("test@test.com&role=admin")
+	userProfile := application.NewEcbUserProfile()
+	encryptedProfile, err := userProfile.GetEncryptedProfile("test@test.com&role=admin")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	profile, err := krypto.ParseEncryptedProfile(encryptedProfile)
+	hasAdmin, err := userProfile.HasAdminRole(encryptedProfile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
+	} else if hasAdmin {
+		fmt.Println("FAILED - user got admin role when they shouldn't")
+	} else {
+		fmt.Println("OK")
 	}
-	util.PrintResults("3", fmt.Sprintf("%d", len(profile)))
-	util.PrintResults("test@test.com&role=admin", profile["email"])
-	util.PrintResults("10", profile["uid"])
-	util.PrintResults("user", profile["role"])
 
 	// Test forging an admin role
 	fmt.Println("\nForging an admin user")
-	encryptedProfile, err = krypto.GenerateAdminUserToken()
+	attacker := attack.NewUserProfileAttacker(userProfile)
+	encryptedProfile, err = attacker.ForgeAdminToken()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	profile, err = krypto.ParseEncryptedProfile(encryptedProfile)
+	hasAdmin, err = userProfile.HasAdminRole(encryptedProfile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
+	} else if hasAdmin {
+		fmt.Println("OK")
+	} else {
+		fmt.Println("FAILED - admin role forgery failed")
 	}
-	util.PrintResults("admin", profile["role"])
 }
 
 // RunChallenge14 tests that set2 challenge14 has been correctly implemented
@@ -198,12 +202,14 @@ func RunChallenge15() {
 func RunChallenge16() {
 	util.PrintChallengeHeader(2, 16)
 
+	queryBuilder := application.NewCbcQueryBuilder()
+
 	input := []byte(";admin=true")
-	query, err := krypto.GenerateEncryptedQuery(input)
+	query, err := queryBuilder.GetEncryptedQuery(input)
 	if err != nil {
 		fmt.Println("Error generating encrypted query", err.Error())
 	}
-	hasRole, err := krypto.HasAdminRole(query)
+	hasRole, err := queryBuilder.HasAdminRole(query)
 	if err != nil {
 		fmt.Println("Error checking for admin role", err.Error())
 	}
@@ -229,7 +235,7 @@ func RunChallenge16() {
 	//                                                '-' ^ ('=' ^ '-') = '='
 
 	input = []byte("bbbbbbbbbbbbbbbbaaaaa-admin-true")
-	query, err = krypto.GenerateEncryptedQuery(input)
+	query, err = queryBuilder.GetEncryptedQuery(input)
 	if err != nil {
 		fmt.Println("Error generating encrypted query", err.Error())
 	}
@@ -239,7 +245,7 @@ func RunChallenge16() {
 	query[32+5] ^= 0x16  // convert '-' to ';'
 	query[32+11] ^= 0x10 // convert '-' to '='
 
-	hasRole, err = krypto.HasAdminRole(query)
+	hasRole, err = queryBuilder.HasAdminRole(query)
 	if err != nil {
 		fmt.Println("Error checking for admin role", err.Error())
 	}

@@ -1,14 +1,26 @@
-package krypto
+package attack
 
-// GenerateAdminUserToken creates a valid user token where the role is set to admin.
+import "github.com/kern--/Cryptopals/krypto/application"
+
+// UserProfileAttacker is a type that can forge admin tokens
+type UserProfileAttacker struct {
+	profile *application.EcbUserProfile
+}
+
+// NewUserProfileAttacker creates a new UserProfileAttacker for a given EcbUserProfile application
+func NewUserProfileAttacker(profile *application.EcbUserProfile) *UserProfileAttacker {
+	return &UserProfileAttacker{profile}
+}
+
+// ForgeAdminToken creates a valid user token where the role is set to admin.
 //  no guarantees are made about the email associated with the user
-func GenerateAdminUserToken() ([]byte, error) {
+func (attacker *UserProfileAttacker) ForgeAdminToken() ([]byte, error) {
 	// Find the encrypted value of the string "role=admin" that's validly padded
 	// The string that get's encrypted should look like this:
 	// email=aaaaaaaaaa|role=admin      |&uid=...
 	// where | just show block boundaries and the ' ' characters are valid padding bytes
 	email := "aaaaaaaaaarole=admin\x06\x06\x06\x06\x06\x06"
-	encryptedProfile, err := GetProfile(email)
+	encryptedProfile, err := attacker.profile.GetEncryptedProfile(email)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +31,7 @@ func GenerateAdminUserToken() ([]byte, error) {
 	//  Input should look like this:
 	//  email=aaaaaaaaaa|bbbbbbbb&uid=10&|role=user       |
 	email = "aaaaaaaaaabbbbbbbb"
-	encryptedProfile, err = GetProfile(email)
+	encryptedProfile, err = attacker.profile.GetEncryptedProfile(email)
 	if err != nil {
 		return nil, err
 	}
@@ -28,15 +40,4 @@ func GenerateAdminUserToken() ([]byte, error) {
 	length := len(encryptedProfile)
 	copy(encryptedProfile[length-16:], roleAdminBlock)
 	return encryptedProfile, nil
-}
-
-// HasAdminRole detects whether an encrypted query contains the admin role
-func HasAdminRole(encryptedQuery []byte) (bool, error) {
-	plaintext, err := DecryptQuery(encryptedQuery)
-	if err != nil {
-		return false, err
-	}
-	kvp := ParseProfileKeyValuePairs(string(plaintext), "=", ";")
-	_, exists := kvp["admin"]
-	return exists, nil
 }
