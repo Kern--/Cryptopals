@@ -17,9 +17,9 @@ func NewUserProfileAttacker(profile *application.EcbUserProfile) *UserProfileAtt
 func (attacker *UserProfileAttacker) ForgeAdminToken() ([]byte, error) {
 	// Find the encrypted value of the string "role=admin" that's validly padded
 	// The string that get's encrypted should look like this:
-	// email=aaaaaaaaaa|role=admin      |&uid=...
+	// email=aaaaarole=|admin           |&uid=...
 	// where | just show block boundaries and the ' ' characters are valid padding bytes
-	email := "aaaaaaaaaarole=admin\x06\x06\x06\x06\x06\x06"
+	email := "aaaaarole=admin\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b"
 	encryptedProfile, err := attacker.profile.GetEncryptedProfile(email)
 	if err != nil {
 		return nil, err
@@ -29,8 +29,8 @@ func (attacker *UserProfileAttacker) ForgeAdminToken() ([]byte, error) {
 
 	// Get a profile for a user which forces the last block to be "role=user" with padding.
 	//  Input should look like this:
-	//  email=aaaaaaaaaa|bbbbbbbb&uid=10&|role=user       |
-	email = "aaaaaaaaaabbbbbbbb"
+	//  email=aaaaaaaaaa|bbb&uid=10&role=|user            |
+	email = "aaaaaaaaaabbb"
 	encryptedProfile, err = attacker.profile.GetEncryptedProfile(email)
 	if err != nil {
 		return nil, err
