@@ -23,9 +23,9 @@ func NewEcbUserProfile() *EcbUserProfile {
 // GetEncryptedProfile gets an encrypted profile for a give email address
 func (user *EcbUserProfile) GetEncryptedProfile(email string) ([]byte, error) {
 	dict := make(map[string]string)
-	// Do a dumb replacement so that I can still put '=' and padding bytes
-	//  into my email
-	dict["email"] = strings.Replace(email, "&", " ", -1)
+	email = strings.Replace(email, "&", " ", -1)
+	email = strings.Replace(email, "=", " ", -1)
+	dict["email"] = email
 	dict["uid"] = "10"
 	dict["role"] = "user"
 	keys := []string{"email", "uid", "role"}

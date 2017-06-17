@@ -22,19 +22,8 @@ func DecodeQueryString(input string, keyValueSparator string, groupSeparator str
 	keyvaluepairs := strings.Split(input, groupSeparator)
 	for _, pair := range keyvaluepairs {
 		keyandvalue := strings.Split(pair, keyValueSparator)
-		var value string
-		// if the length > 2 then there is an "=" in the value so we should rejoin
-		//  it to make the value whole again
-
-		switch {
-		case len(keyandvalue) > 2:
-			value = strings.Join(keyandvalue[1:], keyValueSparator)
-		case len(keyandvalue) == 2:
-			value = keyandvalue[1]
-		default:
-			continue
-		}
 		key := keyandvalue[0]
+		value := keyandvalue[1]
 		dict[key] = value
 	}
 	return dict
