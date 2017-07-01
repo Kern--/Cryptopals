@@ -85,8 +85,6 @@ func (cipher *CbcCipher) Decrypt(ciphertext []byte, iv []byte) ([]byte, error) {
 		previousBlock = curCipherBlock
 	}
 
-	// Assume padding is correct for now and remove it
-	numPaddingBytes := int(plaintext[len(plaintext)-1])
-
-	return plaintext[:len(plaintext)-numPaddingBytes], nil
+	// Remove padding
+	return util.RemovePkcs7Padding(plaintext, blockSize)
 }

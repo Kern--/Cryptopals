@@ -6,6 +6,7 @@ import (
 
 	"github.com/kern--/Cryptopals/set1"
 	"github.com/kern--/Cryptopals/set2"
+	"github.com/kern--/Cryptopals/set3"
 )
 
 type challenge func()
@@ -29,13 +30,15 @@ var challenges = [...]challenge{
 	set2.RunChallenge14,
 	set2.RunChallenge15,
 	set2.RunChallenge16,
+	set3.RunChallenge17,
 }
 
 var sets = [...][]challenge{
 	// 0 = all sets
 	challenges[1:],
 	challenges[1:8],
-	challenges[9:],
+	challenges[9:16],
+	challenges[17:],
 }
 
 func main() {

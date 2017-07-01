@@ -7,6 +7,9 @@ import (
 	"math"
 )
 
+// ErrInvalidPadding is an error indicating that a plaintext has invalid pkcs#7 padding
+var ErrInvalidPadding error = errors.New("Invalid Padding")
+
 // HexToBase64 converts a hex encoded string to a base64 encoded string
 func HexToBase64(str string) (string, error) {
 	inputBytes, err := hex.DecodeString(str)
@@ -116,13 +119,13 @@ func AddPkcs7Padding(input []byte, blocksize int) []byte {
 func RemovePkcs7Padding(input []byte, blockSize int) ([]byte, error) {
 	inputLen := len(input)
 	padLen := int(input[inputLen-1])
-	if padLen > blockSize || inputLen < padLen {
-		return nil, errors.New("Invalid padding")
+	if padLen > blockSize || inputLen < padLen || padLen < 1 {
+		return nil, ErrInvalidPadding
 	}
 
 	for i := 0; i < padLen; i++ {
 		if input[inputLen-1-i] != byte(padLen) {
-			return nil, errors.New("Invalid padding")
+			return nil, ErrInvalidPadding
 		}
 	}
 	return input[:inputLen-padLen], nil
