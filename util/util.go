@@ -10,6 +10,14 @@ import (
 // ErrInvalidPadding is an error indicating that a plaintext has invalid pkcs#7 padding
 var ErrInvalidPadding error = errors.New("Invalid Padding")
 
+// Min returns the minimum of two integers
+func Min(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // HexToBase64 converts a hex encoded string to a base64 encoded string
 func HexToBase64(str string) (string, error) {
 	inputBytes, err := hex.DecodeString(str)
@@ -20,13 +28,20 @@ func HexToBase64(str string) (string, error) {
 	return encoded, nil
 }
 
-// Xor xors two equal length byte arrays
+// Xor xors two equal length byte slices
 func Xor(a []byte, b []byte) []byte {
 	c := make([]byte, len(a))
 	for i := 0; i < len(a); i++ {
 		c[i] = a[i] ^ b[i]
 	}
 	return c
+}
+
+// InlineXor xors two equal length byte slices and puts the result in dst
+func InlineXor(dst []byte, src []byte) {
+	for i := 0; i < len(dst); i++ {
+		dst[i] ^= src[i]
+	}
 }
 
 // SingleByteXor xors each element in an array by a byte key
